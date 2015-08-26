@@ -25,7 +25,7 @@ class WXpay(object):
 
     URL_UINFIEDORDER = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
     URL_VERIFY_ORDER = 'https://api.mch.weixin.qq.com/pay/orderquery'
-
+    URL_REFUND_ORDER = "https://api.mch.weixin.qq.com/secapi/pay/refund"
     def __init__(self, appid, mch_id, key, ip,
                  notify_url=None, appsecret=None):
         self.appid = appid
@@ -70,11 +70,12 @@ class WXpay(object):
         sign = hashlib.md5(foo_sign).hexdigest().upper()
         return sign
 
-    def unifiedorder(self, product, openid=None, trade_type=None):
+
+    def unifiedorder(self, product, openid=None, trade_type="APP"):
         ''' 统一下单接口 '''
 
         assert isinstance(product, dict)
-        assert trade_type in ('JSAPI', 'NATIVE')
+        assert trade_type in ('JSAPI', 'NATIVE','APP')
 
         post_dict = {
             'appid': self.appid,
@@ -92,11 +93,9 @@ class WXpay(object):
             raise MissingParameter(u'JSAPI必须传入openid')
         post_dict['sign'] = self.generate_sign(post_dict)
         ret_xml = dict2xml(post_dict, wrap='xml')
-
         r = requests.post(self.URL_UINFIEDORDER, data=ret_xml.encode('utf-8'))
         r.encoding = 'UTF-8'
         data = r.text.encode('utf-8')
-
         ret_dict = {}
         x = ElementTree.fromstring(data)
         if x.find('return_code').text.upper() == 'FAIL':
@@ -108,7 +107,28 @@ class WXpay(object):
             ret_dict['code_url'] = x.find('code_url').text
         else:
             ret_dict['prepay_id'] = x.find('prepay_id').text
-        return ret_dict
+
+        ret_with_sign = {}
+
+        if trade_type == "APP" :
+            ret_with_sign["appid"] = self.appid
+            ret_with_sign["partnerid"] = self.mch_id
+            ret_with_sign["prepayid"] = ret_dict['prepay_id']
+            ret_with_sign["package"] = "Sign=WXPay"
+            ret_with_sign["noncestr"] = self.generate_nonce_str()
+            ret_with_sign["timestamp"] = int(time.time())
+            ret_with_sign["sign"] = self.generate_sign(ret_with_sign)
+
+        if trade_type == "JSAPI" :
+            ret_with_sign["appId"] = self.appid
+            ret_with_sign["timeStamp"] = int(time.time())
+            ret_with_sign["nonceStr"] = self.generate_nonce_str()
+            ret_with_sign["package"] = "prepay_id=%s" % ( ret_dict['prepay_id'])
+            ret_with_sign["signType"] = "MD5"
+            ret_with_sign["paySign"] = self.generate_sign(ret_with_sign)
+        return ret_with_sign
+
+
 
     def refundorder(self,out_trade_no=None,transaction_id=None,total_fee=None,refund_fee=None):
         """订单退款"""
@@ -127,14 +147,9 @@ class WXpay(object):
 
         post_dict["sign"] = self.generate_sign(post_dict)
         ret_xml = dict2xml(post_dict, wrap='xml')
-        log.debug("请求参数")
-        log.debug(ret_xml)
         r = requests.post(self.URL_REFUND_ORDER, data=ret_xml.encode('utf-8') ,cert=self.cert_path)
         r.encoding = 'UTF-8'
         data = r.text.encode('utf-8')
-        log.debug("返回结果")
-        log.debug(data)
-        log.debug("\n"+data)
         ret_dict = {}
         x = ElementTree.fromstring(data)
         if x.find('return_code').text.upper() == 'FAIL':
