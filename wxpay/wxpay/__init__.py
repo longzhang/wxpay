@@ -91,6 +91,10 @@ class WXpay(object):
         }
         if trade_type == 'JSAPI' and openid is None:
             raise MissingParameter(u'JSAPI必须传入openid')
+
+        if trade_type == "JSAPI" :
+            post_dict["openid"] = openid
+
         post_dict['sign'] = self.generate_sign(post_dict)
         ret_xml = dict2xml(post_dict, wrap='xml')
         r = requests.post(self.URL_UINFIEDORDER, data=ret_xml.encode('utf-8'))
