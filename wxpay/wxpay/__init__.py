@@ -434,3 +434,6 @@ class JSWXpay(WXpay):
         }
         ret_dict['paySign'] = self.generate_sign(ret_dict)
         return ret_dict
+
+
+
