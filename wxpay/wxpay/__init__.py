@@ -120,12 +120,12 @@ class WXpay(object):
             ret_with_sign["prepayid"] = ret_dict['prepay_id']
             ret_with_sign["package"] = "Sign=WXPay"
             ret_with_sign["noncestr"] = self.generate_nonce_str()
-            ret_with_sign["timestamp"] = int(time.time())
+            ret_with_sign["timestamp"] = str(int(time.time()))
             ret_with_sign["sign"] = self.generate_sign(ret_with_sign)
 
         if trade_type == "JSAPI" :
             ret_with_sign["appId"] = self.appid
-            ret_with_sign["timeStamp"] = int(time.time())
+            ret_with_sign["timeStamp"] = str(int(time.time()))
             ret_with_sign["nonceStr"] = self.generate_nonce_str()
             ret_with_sign["package"] = "prepay_id=%s" % ( ret_dict['prepay_id'])
             ret_with_sign["signType"] = "MD5"
